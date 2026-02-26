@@ -1,0 +1,47 @@
+[
+    {
+        "项目名": "[پیکربندی CM](پیش‌فرض)",
+        "提示消息": "به پیکربندی پروژه CM تغییر کرد، مناسب برای پروژه .",
+        "路径模板": {
+            "PROXYIP": "proxyip={{IP:PORT}}",
+            "SOCKS5": {
+                "全局": "socks5://{{IP:PORT}}",
+                "标准": "socks5={{IP:PORT}}"
+            },
+            "HTTP": {
+                "全局": "http://{{IP:PORT}}",
+                "标准": "http={{IP:PORT}}"
+            }
+        }
+    },
+    {
+        "项目名": "[پیکربندی 3K]",
+        "提示消息": "به پیکربندی پروژه 3K تغییر کرد، مناسب برای پروژه 6.",
+        "路径模板": {
+            "PROXYIP": "proxyip={{IP:PORT}}",
+            "SOCKS5": {
+                "全局": "socks5://{{IP:PORT}}?globalproxy",
+                "标准": "socks5://{{IP:PORT}}"
+            },
+            "HTTP": {
+                "全局": "http://{{IP:PORT}}?globalproxy",
+                "标准": "http://{{IP:PORT}}"
+            }
+        }
+    },
+    {
+        "项目名": "eooce/Cloudflare-proxy[پیکربندی پروژه لاوانگ]",
+        "提示消息": "توجه! پروژه لاوانگ از حالت غیرسراسری برای SOCKS5/HTTP خروجی پشتیبانی نمی‌کند.",
+        "路径模板": {
+            "PROXYIP": "proxyip={{IP:PORT}}",
+            "SOCKS5": {
+                "全局": "proxyip=socks5://{{IP:PORT}}",
+                "标准": "proxyip=socks5://{{IP:PORT}}"
+            },
+            "HTTP": {
+                "全局": "proxyip=http://{{IP:PORT}}",
+                "标准": "proxyip=http://{{IP:PORT}}"
+            }
+        }
+    }
+]
