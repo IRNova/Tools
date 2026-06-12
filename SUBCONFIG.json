@@ -1,114 +1,114 @@
 [
     {
-        "label": "قوانین ACL4SSR",
+        "label": "ACL4SSR Rules",
         "options": [
             {
-                "label": "نسخه پیش‌فرض - گروه‌بندی کامل ACL4SSR_Online",
+                "label": "Default - Full Grouping ACL4SSR_Online",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online.ini"
             },
             {
-                "label": "مسدودکننده تبلیغات بیشتر ACL4SSR_Online_AdblockPlus",
+                "label": "More Ad Blocking ACL4SSR_Online_AdblockPlus",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_AdblockPlus.ini"
             },
             {
-                "label": "گروه‌بندی چند کشوری ACL4SSR_Online_MultiCountry",
+                "label": "Multi-Country Grouping ACL4SSR_Online_MultiCountry",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_MultiCountry.ini"
             },
             {
-                "label": "بدون تست سرعت خودکار ACL4SSR_Online_NoAuto",
+                "label": "No Auto Speed Test ACL4SSR_Online_NoAuto",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_NoAuto.ini"
             },
             {
-                "label": "بدون مسدودکننده تبلیغات ACL4SSR_Online_NoReject",
+                "label": "No Ad Blocking ACL4SSR_Online_NoReject",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_NoReject.ini"
             },
             {
-                "label": "نسخه مینیمال ACL4SSR_Online_Mini",
+                "label": "Mini Version ACL4SSR_Online_Mini",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini.ini"
             },
             {
-                "label": "نسخه مینیمال - مسدودکننده تبلیغات بیشتر ACL4SSR_Online_Mini_AdblockPlus",
+                "label": "Mini - More Ad Blocking ACL4SSR_Online_Mini_AdblockPlus",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini_AdblockPlus.ini"
             },
             {
-                "label": "نسخه مینیمال - بدون تست سرعت خودکار ACL4SSR_Online_Mini_NoAuto",
+                "label": "Mini - No Auto Speed Test ACL4SSR_Online_Mini_NoAuto",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini_NoAuto.ini"
             },
             {
-                "label": "نسخه مینیمال - با Failover ACL4SSR_Online_Mini_Fallback",
+                "label": "Mini - With Failover ACL4SSR_Online_Mini_Fallback",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini_Fallback.ini"
             },
             {
-                "label": "نسخه مینیمال - تست سرعت خودکار، Failover، لود بالانسینگ ACL4SSR_Online_Mini_MultiMode",
+                "label": "Mini - Auto Test, Failover, Load Balancing ACL4SSR_Online_Mini_MultiMode",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini_MultiMode.ini"
             },
             {
-                "label": "نسخه مینیمال - با کشورهای HK، US، JP ACL4SSR_Online_Mini_MultiCountry",
+                "label": "Mini - With HK, US, JP ACL4SSR_Online_Mini_MultiCountry",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Mini_MultiCountry.ini"
             },
             {
-                "label": "گروه‌بندی کامل - برای کاربران حرفه‌ای ACL4SSR_Online_Full",
+                "label": "Full Grouping - For Professional Users ACL4SSR_Online_Full",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full.ini"
             },
             {
-                "label": "گروه‌بندی کامل - حالت چندگانه - برای کاربران حرفه‌ای ACL4SSR_Online_Full_MultiMode",
+                "label": "Full Grouping - Multi Mode - For Professionals ACL4SSR_Online_Full_MultiMode",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full_MultiMode.ini"
             },
             {
-                "label": "گروه‌بندی کامل - بدون تست سرعت خودکار - برای کاربران حرفه‌ای ACL4SSR_Online_Full_NoAuto",
+                "label": "Full Grouping - No Auto Speed Test - For Professionals ACL4SSR_Online_Full_NoAuto",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full_NoAuto.ini"
             },
             {
-                "label": "گروه‌بندی کامل - برای کاربران حرفه‌ای - مسدودکننده تبلیغات بیشتر ACL4SSR_Online_Full_AdblockPlus",
+                "label": "Full Grouping - For Professionals - More Ad Blocking ACL4SSR_Online_Full_AdblockPlus",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full_AdblockPlus.ini"
             },
             {
-                "label": "گروه‌بندی کامل - برای کاربران حرفه‌ای - نتفلیکس کامل ACL4SSR_Online_Full_Netflix",
+                "label": "Full Grouping - For Professionals - Full Netflix ACL4SSR_Online_Full_Netflix",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full_Netflix.ini"
             },
             {
-                "label": "گروه‌بندی کامل - برای کاربران حرفه‌ای - گوگل تفصیلی ACL4SSR_Online_Full_Google",
+                "label": "Full Grouping - For Professionals - Detailed Google ACL4SSR_Online_Full_Google",
                 "value": "https://raw.githubusercontent.com/ACL4SSR/ACL4SSR/refs/heads/master/Clash/config/ACL4SSR_Online_Full_Google.ini"
             }
         ]
     },
     {
-        "label": "قوانین CM شخصی",
+        "label": "Custom CM Rules",
         "options": [
             {
-                "label": "نسخه پیش‌فرض - شناسایی HK و US CM_Online",
+                "label": "Default - Detect HK & US CM_Online",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online.ini"
             },
             {
-                "label": "نسخه مینیمال - تست سرعت خودکار، Failover، لود بالانسینگ - شناسایی CloudFlareCDN CM_Online_Mini_MultiMode_CF",
+                "label": "Mini - Auto Test, Failover, Load Balancing - Detect CloudFlareCDN CM_Online_Mini_MultiMode_CF",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Mini_MultiMode_CF.ini"
             },
             {
-                "label": "نسخه مینیمال - بدون تست سرعت خودکار (کاهش خطای -1) - شناسایی CloudFlareCDN CM_Online_Mini_NoAuto_CF",
+                "label": "Mini - No Auto Speed Test (Reduce -1 Error) - Detect CloudFlareCDN CM_Online_Mini_NoAuto_CF",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Mini_NoAuto_CF.ini"
             },
             {
-                "label": "شناسایی HK و US - لود بالانسینگ CM_Online_MultiCountry",
+                "label": "Detect HK & US - Load Balancing CM_Online_MultiCountry",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_MultiCountry.ini"
             },
             {
-                "label": "شناسایی HK، US و CloudFlareCDN - لود بالانسینگ - مخصوص نودهای CF CM_Online_MultiCountry_CF",
+                "label": "Detect HK, US & CloudFlareCDN - Load Balancing - For CF Nodes CM_Online_MultiCountry_CF",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_MultiCountry_CF.ini"
             },
             {
-                "label": "شناسایی چند منطقه CM_Online_Full",
+                "label": "Multi-Region Detection CM_Online_Full",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full.ini"
             },
             {
-                "label": "شناسایی چند منطقه و CloudFlareCDN - مخصوص نودهای CF CM_Online_Full_CF",
+                "label": "Multi-Region & CloudFlareCDN Detection - For CF Nodes CM_Online_Full_CF",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full_CF.ini"
             },
             {
-                "label": "شناسایی چند منطقه - لود بالانسینگ CM_Online_Full_MultiMode",
+                "label": "Multi-Region Detection - Load Balancing CM_Online_Full_MultiMode",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full_MultiMode.ini"
             },
             {
-                "label": "شناسایی چند منطقه و CloudFlareCDN - لود بالانسینگ - مخصوص نودهای CF CM_Online_Full_MultiMode_CF",
+                "label": "Multi-Region & CloudFlareCDN Detection - Load Balancing - For CF Nodes CM_Online_Full_MultiMode_CF",
                 "value": "https://raw.githubusercontent.com/cmliu/ACL4SSR/refs/heads/main/Clash/config/ACL4SSR_Online_Full_MultiMode_CF.ini"
             }
         ]

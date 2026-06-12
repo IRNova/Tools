@@ -1,46 +1,46 @@
 [
     {
-        "项目名": "[پیکربندی CM](پیش‌فرض)",
-        "提示消息": "به پیکربندی پروژه CM تغییر کرد، مناسب برای پروژه .",
-        "路径模板": {
+        "project_name": "[CM Config](Default)",
+        "hint_message": "Switched to CM project config, suitable for . project.",
+        "path_template": {
             "PROXYIP": "proxyip={{IP:PORT}}",
             "SOCKS5": {
-                "全局": "socks5://{{IP:PORT}}",
-                "标准": "socks5={{IP:PORT}}"
+                "global": "socks5://{{IP:PORT}}",
+                "standard": "socks5={{IP:PORT}}"
             },
             "HTTP": {
-                "全局": "http://{{IP:PORT}}",
-                "标准": "http={{IP:PORT}}"
+                "global": "http://{{IP:PORT}}",
+                "standard": "http={{IP:PORT}}"
             }
         }
     },
     {
-        "项目名": "[پیکربندی 3K]",
-        "提示消息": "به پیکربندی پروژه 3K تغییر کرد، مناسب برای پروژه 6.",
-        "路径模板": {
+        "project_name": "[3K Config]",
+        "hint_message": "Switched to 3K project config, suitable for project 6.",
+        "path_template": {
             "PROXYIP": "proxyip={{IP:PORT}}",
             "SOCKS5": {
-                "全局": "socks5://{{IP:PORT}}?globalproxy",
-                "标准": "socks5://{{IP:PORT}}"
+                "global": "socks5://{{IP:PORT}}?globalproxy",
+                "standard": "socks5://{{IP:PORT}}"
             },
             "HTTP": {
-                "全局": "http://{{IP:PORT}}?globalproxy",
-                "标准": "http://{{IP:PORT}}"
+                "global": "http://{{IP:PORT}}?globalproxy",
+                "standard": "http://{{IP:PORT}}"
             }
         }
     },
     {
-        "项目名": "eooce/Cloudflare-proxy[پیکربندی پروژه لاوانگ]",
-        "提示消息": "توجه! پروژه لاوانگ از حالت غیرسراسری برای SOCKS5/HTTP خروجی پشتیبانی نمی‌کند.",
-        "路径模板": {
+        "project_name": "eooce/Cloudflare-proxy[Lawang Project Config]",
+        "hint_message": "Note! The Lawang project does not support non-global mode for SOCKS5/HTTP output.",
+        "path_template": {
             "PROXYIP": "proxyip={{IP:PORT}}",
             "SOCKS5": {
-                "全局": "proxyip=socks5://{{IP:PORT}}",
-                "标准": "proxyip=socks5://{{IP:PORT}}"
+                "global": "proxyip=socks5://{{IP:PORT}}",
+                "standard": "proxyip=socks5://{{IP:PORT}}"
             },
             "HTTP": {
-                "全局": "proxyip=http://{{IP:PORT}}",
-                "标准": "proxyip=http://{{IP:PORT}}"
+                "global": "proxyip=http://{{IP:PORT}}",
+                "standard": "proxyip=http://{{IP:PORT}}"
             }
         }
     }
