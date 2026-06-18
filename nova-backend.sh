@@ -5,10 +5,14 @@
 #  "Backend mode" forwards to (unlocks VMess + UDP / voice-video calls).
 #
 #  Run on YOUR OWN VPS (you stay in control — nothing is sent anywhere):
-#     bash <(curl -fsSL https://raw.githubusercontent.com/iiviirv/panel/main/nova-backend.sh)
+#     bash <(curl -fsSL https://raw.githubusercontent.com/IRNova/Tools/main/nova-backend.sh)
 #
-#  Or with a custom path/port:
-#     NOVA_PATH=/mysecret NOVA_PORT=10000 bash <(curl -fsSL .../nova-backend.sh)
+#  Or with a custom path/port (port MUST be Cloudflare-allowed: 8080, 8880, 2052, 2082, 2086, 2095):
+#     NOVA_PATH=/mysecret NOVA_PORT=8080 bash <(curl -fsSL .../nova-backend.sh)
+#
+#  RECOMMENDED — match your Nova panel's UUID so clients work immediately:
+#     NOVA_UUID=<your-panel-uuid> bash <(curl -fsSL .../nova-backend.sh)
+#  (Without this, a random UUID is generated and you must sync it to the panel later.)
 #
 #  PRIVACY: this runs entirely on your server. It does NOT phone home, does NOT
 #  send your IP / password / keys anywhere. The only outbound request is
@@ -26,8 +30,12 @@ err()  { printf '%s\n' "${c_red}✗${c_rst} $*" >&2; }
 
 # ---- config (overridable via env) -------------------------------------------
 NOVA_PATH="${NOVA_PATH:-/novavpn}"
-NOVA_PORT_VLESS="${NOVA_PORT:-10000}"
-NOVA_PORT_VMESS="$((NOVA_PORT_VLESS + 1))"
+# IMPORTANT: Cloudflare Workers can only fetch() to a fixed set of ports. For plain HTTP the
+# allowed ports are 80, 8080, 8880, 2052, 2082, 2086, 2095. Nova relays to this backend FROM a
+# Worker, so the backend MUST listen on one of those — otherwise the relay silently times out.
+# Defaults: VLESS on 8080, VMess on 8880 (both Cloudflare-allowed). Override VLESS with NOVA_PORT.
+NOVA_PORT_VLESS="${NOVA_PORT:-8080}"
+NOVA_PORT_VMESS="${NOVA_PORT_VMESS:-8880}"
 [ "${NOVA_PATH:0:1}" = "/" ] || NOVA_PATH="/$NOVA_PATH"
 
 XRAY_CONFIG="/usr/local/etc/xray/config.json"
@@ -61,15 +69,25 @@ else
   ok "Xray installed"
 fi
 
-# ---- 2) generate a UUID ------------------------------------------------------
-if command -v xray >/dev/null 2>&1; then
-  UUID="$(xray uuid 2>/dev/null || true)"
+# ---- 2) UUID: use NOVA_UUID if provided (to MATCH your panel), else generate -
+# IMPORTANT: the UUID here MUST match your Nova panel's UUID, or clients get dropped.
+# Easiest: copy your panel UUID and run:  NOVA_UUID=<panel-uuid> bash <(curl ... nova-backend.sh)
+if [ -n "${NOVA_UUID:-}" ]; then
+  UUID="$NOVA_UUID"
+  ok "Using provided UUID (matches your panel): $UUID"
+else
+  if command -v xray >/dev/null 2>&1; then
+    UUID="$(xray uuid 2>/dev/null || true)"
+  fi
+  if [ -z "${UUID:-}" ]; then
+    UUID="$(cat /proc/sys/kernel/random/uuid 2>/dev/null || true)"
+  fi
+  [ -n "${UUID:-}" ] || { err "Could not generate a UUID."; exit 1; }
+  warn "Generated a RANDOM UUID. This will NOT match your panel automatically."
+  warn "If clients time out, set the VPS UUID to your panel's:"
+  warn "  sed -i 's/$UUID/<YOUR-PANEL-UUID>/g' $XRAY_CONFIG && systemctl restart xray"
+  ok "UUID generated"
 fi
-if [ -z "${UUID:-}" ]; then
-  UUID="$(cat /proc/sys/kernel/random/uuid 2>/dev/null || true)"
-fi
-[ -n "${UUID:-}" ] || { err "Could not generate a UUID."; exit 1; }
-ok "UUID generated"
 
 # ---- 3) write the Xray config (WS, security none; TLS is at Cloudflare) ------
 say "Writing Xray config..."
@@ -167,6 +185,9 @@ echo "     ${c_cyn}vless://${UUID}@YOUR-NOVA-DOMAIN:443?security=tls&type=ws&hos
 echo
 echo "  ${c_yel}Flow:${c_rst} client → Cloudflare/Nova (TLS) → this VPS (Xray) → internet"
 echo "  ${c_yel}Note:${c_rst} Nova's 'Health check' may say no /health — that's normal; test with a real client."
+echo "  ${c_yel}Ports:${c_rst} this uses ${c_bld}${NOVA_PORT_VLESS}${c_rst}/${c_bld}${NOVA_PORT_VMESS}${c_rst} because Cloudflare Workers can only relay to a"
+echo "         fixed set of ports (80,8080,8880,2052,2082,2086,2095 for http). Open ${NOVA_PORT_VLESS} in your"
+echo "         provider's firewall. Do NOT use 10000 — the Worker can't reach it and clients time out."
 echo
 echo "${c_grn}  Privacy: nothing was sent off this server. Your IP/UUID/password stay here.${c_rst}"
 echo
