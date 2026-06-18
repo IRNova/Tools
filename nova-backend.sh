@@ -57,6 +57,29 @@ else
 fi
 [ "${NOVA_PATH:0:1}" = "/" ] || NOVA_PATH="/$NOVA_PATH"
 
+# ---- optional: let the user pick a custom port (validated against Cloudflare's list) ----------
+# Cloudflare Workers can ONLY relay to these ports. A port outside the list (e.g. 2076, 3080, 10000)
+# means the Worker can't reach the backend at all — so we validate and refuse bad ports up front.
+CF_HTTP_PORTS="80 8080 8880 2052 2082 2086 2095"
+CF_HTTPS_PORTS="443 2053 2083 2087 2096 8443"
+if [ "$NOVA_TLS" = "1" ]; then CF_OK_PORTS="$CF_HTTPS_PORTS"; else CF_OK_PORTS="$CF_HTTP_PORTS"; fi
+port_is_allowed(){ for p in $CF_OK_PORTS; do [ "$1" = "$p" ] && return 0; done; return 1; }
+# Only prompt when NOVA_PORT wasn't supplied on the command line and we have a real terminal.
+if [ -z "${NOVA_PORT:-}" ] && [ -t 0 -o -e /dev/tty ]; then
+  echo
+  echo "Port for the backend (must be a Cloudflare-allowed port)."
+  echo "  Allowed (${NOVA_SCHEME}): ${CF_OK_PORTS}"
+  echo "  Press Enter to keep the default ${NOVA_PORT_VLESS}, or type one of the allowed ports."
+  while :; do
+    read -r -p "  Port [${NOVA_PORT_VLESS}]: " _np < /dev/tty || _np=""
+    [ -z "$_np" ] && break                       # keep default
+    if printf '%s' "$_np" | grep -Eq '^[0-9]+$' && port_is_allowed "$_np"; then
+      NOVA_PORT_VLESS="$_np"; break
+    fi
+    echo "  ✗ ${_np} is NOT a Cloudflare-allowed port. Pick one of: ${CF_OK_PORTS}"
+  done
+fi
+
 XRAY_CONFIG="/usr/local/etc/xray/config.json"
 
 # ---- preflight ---------------------------------------------------------------
@@ -192,16 +215,9 @@ fi
 
 # ---- 6) detect public IP -----------------------------------------------------
 
-# ---- 7) optional: change root password (security) ---------------------------
-echo
-warn "Security tip: if you logged in with a root password you shared or typed, change it now."
-read -r -p "$(printf '%s' "${c_cyn}Change the root password now? [y/N]: ${c_rst}")" CHPW < /dev/tty || CHPW="n"
-if printf '%s' "${CHPW:-n}" | grep -qi '^y'; then
-  passwd root < /dev/tty || warn "Password change skipped/failed."
-  ok "Root password updated (we never see it — it stays on your server)."
-else
-  echo "   Skipped. You can change it any time with: passwd root"
-fi
+# ---- 7) security note (no prompt — keep the install flowing) -----------------
+# We no longer interrupt the install to ask about the root password. If you want to change it,
+# run `passwd root` yourself any time. (Nothing here ever sees or sends your password.)
 
 # ---- 8) ask for the gray-cloud domain so we can print ONE ready-to-paste URL --
 # The Backend URL must use a domain (Cloudflare Workers can't fetch a bare IP). So we ask for the
