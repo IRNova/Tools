@@ -131,11 +131,10 @@ ok "agent installed at $AGENT_DIR"
 
 # ---- host + TLS cert ---------------------------------------------------------
 PUBIP="$(curl -fsSL https://api.ipify.org 2>/dev/null || curl -fsSL https://ifconfig.me 2>/dev/null || hostname -I | awk '{print $1}')"
-if [ -n "${NOVA_DOMAIN:-}" ]; then
-  HOST="$NOVA_DOMAIN"; INSECURE=false
-else
-  HOST="$PUBIP"; INSECURE=true
-fi
+# The node always comes up self-signed on its public IP. If NOVA_DOMAIN is set we
+# switch it to a trusted Let's Encrypt cert further down, once the agent is live
+# (same code path the app/panel "add a domain" button uses).
+HOST="$PUBIP"; INSECURE=true
 
 if [ ! -s "$CERT_DIR/origin.pem" ] || [ ! -s "$CERT_DIR/origin.key" ]; then
   say "Generating a TLS certificate for $HOST"
@@ -225,6 +224,25 @@ if [ "${USER_COUNT:-0}" = 0 ]; then
   UUID="$(cat /proc/sys/kernel/random/uuid)"
   curl -fsS -b "$CJ" -X POST "$B/admin/users.json" -H "$UA" -H 'Content-Type: application/json' \
     -d "{\"action\":\"add\",\"user\":{\"id\":\"me\",\"uuid\":\"$UUID\",\"email\":\"me\",\"enabled\":true}}" >/dev/null 2>&1 || true
+fi
+
+# If a domain was requested, provision a trusted Let's Encrypt cert and switch
+# the node over to it. Needs port 80 reachable and the domain's DNS pointing here.
+if [ -n "${NOVA_DOMAIN:-}" ]; then
+  say "Getting a certificate for $NOVA_DOMAIN (Let's Encrypt)"
+  DBODY="{\"domain\":\"$NOVA_DOMAIN\",\"method\":\"letsencrypt\""
+  [ -n "${NOVA_DOMAIN_EMAIL:-}" ] && DBODY="$DBODY,\"email\":\"$NOVA_DOMAIN_EMAIL\""
+  DBODY="$DBODY}"
+  curl -fsS -b "$CJ" -X POST "$B/admin/domain" -H "$UA" -H 'Content-Type: application/json' \
+    -d "$DBODY" >/dev/null 2>&1 || true
+  for i in $(seq 1 36); do
+    sleep 5
+    DST="$(curl -fsS -b "$CJ" "$B/admin/domain" -H "$UA" 2>/dev/null || true)"
+    case "$DST" in
+      *'"state":"active"'*) HOST="$NOVA_DOMAIN"; INSECURE=false; ok "certificate issued for $NOVA_DOMAIN"; break;;
+      *'"state":"error"'*)  warn "could not get a certificate; leaving the node on its IP + self-signed cert."; break;;
+    esac
+  done
 fi
 
 SUBTOKEN="$(curl -fsS -b "$CJ" "$B/admin/network-settings.json" -H "$UA" 2>/dev/null | grep -oE '"subToken":"[a-f0-9]+"' | cut -d'"' -f4 || true)"
