@@ -69,12 +69,23 @@ XRAY_BIN="$(command -v xray || echo /usr/local/bin/xray)"
 ok "xray $("$XRAY_BIN" version 2>/dev/null | head -1 | awk '{print $2}')"
 
 # ---- sing-box (Hysteria2 / QUIC gaming path) --------------------------------
+# A custom sing-box build (compiled with the v2ray stats API) so the agent can
+# meter Hysteria2 per-user, same as xray. Pulled as a single gzipped binary,
+# no apt/.deb, so this step is reliable on a fresh box.
 HAS_SINGBOX=0
-if ! command -v sing-box >/dev/null 2>&1; then
+SINGBOX_BIN=/usr/local/bin/sing-box-nova
+SINGBOX_URL="${NOVA_SINGBOX_URL:-https://github.com/IRNova/Tools/releases/download/sing-box/sing-box-nova.gz}"
+if [ ! -x "$SINGBOX_BIN" ]; then
   say "Installing sing-box (Hysteria2)"
-  curl -fsSL https://sing-box.app/install.sh | sh >/dev/null 2>&1 || warn "sing-box install failed; Hysteria2 will be unavailable."
+  for attempt in 1 2 3; do
+    if curl -fsSL "$SINGBOX_URL" -o /tmp/sb.gz && gunzip -f /tmp/sb.gz \
+       && mv -f /tmp/sb "$SINGBOX_BIN" && chmod +x "$SINGBOX_BIN"; then
+      break
+    fi
+    warn "sing-box download failed (try $attempt), retrying..."; sleep 3
+  done
 fi
-if command -v sing-box >/dev/null 2>&1; then
+if [ -x "$SINGBOX_BIN" ]; then
   mkdir -p /etc/sing-box
   # Our own unit: run as root so it can read the origin key, and use our config
   # path. The agent writes /etc/sing-box/config.json and bounces this service.
@@ -86,7 +97,7 @@ Wants=network-online.target
 
 [Service]
 Type=simple
-ExecStart=$(command -v sing-box) run -c /etc/sing-box/config.json
+ExecStart=$SINGBOX_BIN run -c /etc/sing-box/config.json
 Restart=always
 RestartSec=3
 User=root
@@ -97,7 +108,16 @@ UNIT
   systemctl daemon-reload
   systemctl enable sing-box >/dev/null 2>&1 || true
   HAS_SINGBOX=1
-  ok "sing-box $(sing-box version 2>/dev/null | head -1 | awk '{print $3}')"
+  ok "sing-box installed"
+  # grpcurl: the agent uses it to read sing-box's per-user stats for quota.
+  if ! command -v grpcurl >/dev/null 2>&1; then
+    garch="$(uname -m)"; case "$garch" in aarch64) garch=arm64;; x86_64) garch=x86_64;; esac
+    curl -fsSL "https://github.com/fullstorydev/grpcurl/releases/download/v1.9.1/grpcurl_1.9.1_linux_${garch}.tar.gz" -o /tmp/grpcurl.tgz 2>/dev/null \
+      && tar -xzf /tmp/grpcurl.tgz -C /usr/local/bin grpcurl 2>/dev/null \
+      && chmod +x /usr/local/bin/grpcurl 2>/dev/null || warn "grpcurl install failed; Hysteria2 usage will not be metered."
+  fi
+else
+  warn "Could not install sing-box; the node will run without Hysteria2."
 fi
 
 # ---- agent code --------------------------------------------------------------
