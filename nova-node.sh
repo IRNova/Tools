@@ -164,10 +164,15 @@ fi
 curl -fsS -b "$CJ" -X POST "$B/admin/network-settings.json" -H "$UA" -H 'Content-Type: application/json' \
   -d "{\"host\":\"$HOST\",\"insecure\":$INSECURE,\"protocols\":{\"vless\":true,\"vmess\":true,\"trojan\":true}}" >/dev/null 2>&1 || true
 
-# Seed one user so the node is usable immediately.
-UUID="$(cat /proc/sys/kernel/random/uuid)"
-curl -fsS -b "$CJ" -X POST "$B/admin/users.json" -H "$UA" -H 'Content-Type: application/json' \
-  -d "{\"action\":\"add\",\"user\":{\"id\":\"me\",\"uuid\":\"$UUID\",\"email\":\"me\",\"enabled\":true}}" >/dev/null 2>&1 || true
+# Seed one user so the node is usable immediately, but only on a fresh node
+# (re-running the installer must not churn an existing user's UUID).
+USER_COUNT="$(curl -fsS -b "$CJ" "$B/admin/network-settings.json" -H "$UA" 2>/dev/null \
+  | node -e "let s='';process.stdin.on('data',d=>s+=d).on('end',()=>{try{console.log((JSON.parse(s).users||[]).length)}catch{console.log(0)}})" 2>/dev/null || echo 0)"
+if [ "${USER_COUNT:-0}" = 0 ]; then
+  UUID="$(cat /proc/sys/kernel/random/uuid)"
+  curl -fsS -b "$CJ" -X POST "$B/admin/users.json" -H "$UA" -H 'Content-Type: application/json' \
+    -d "{\"action\":\"add\",\"user\":{\"id\":\"me\",\"uuid\":\"$UUID\",\"email\":\"me\",\"enabled\":true}}" >/dev/null 2>&1 || true
+fi
 
 SUBTOKEN="$(curl -fsS -b "$CJ" "$B/admin/network-settings.json" -H "$UA" 2>/dev/null | grep -oE '"subToken":"[a-f0-9]+"' | cut -d'"' -f4 || true)"
 rm -f "$CJ"
