@@ -68,6 +68,18 @@ fi
 XRAY_BIN="$(command -v xray || echo /usr/local/bin/xray)"
 ok "xray $("$XRAY_BIN" version 2>/dev/null | head -1 | awk '{print $2}')"
 
+# Geo databases: the routing engine references geosite:category-ads-all / cn and
+# geoip:ir/cn/ru. Refresh with the comprehensive Loyalsoldier set so those codes
+# always resolve (a missing code makes xray refuse to start). Best-effort; the
+# stock dat that ships with xray stays as the fallback.
+GEO_DIR=/usr/local/share/xray
+mkdir -p "$GEO_DIR"
+for g in geoip geosite; do
+  curl -fsSL -o "$GEO_DIR/$g.dat.new" \
+    "https://github.com/Loyalsoldier/v2ray-rules-dat/releases/latest/download/$g.dat" 2>/dev/null \
+    && mv "$GEO_DIR/$g.dat.new" "$GEO_DIR/$g.dat" || rm -f "$GEO_DIR/$g.dat.new"
+done
+
 # ---- sing-box (Hysteria2 / QUIC gaming path) --------------------------------
 # A custom sing-box build (compiled with the v2ray stats API) so the agent can
 # meter Hysteria2 per-user, same as xray. Pulled as a single gzipped binary,
