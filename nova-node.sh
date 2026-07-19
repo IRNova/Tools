@@ -68,6 +68,38 @@ fi
 XRAY_BIN="$(command -v xray || echo /usr/local/bin/xray)"
 ok "xray $("$XRAY_BIN" version 2>/dev/null | head -1 | awk '{print $2}')"
 
+# ---- sing-box (Hysteria2 / QUIC gaming path) --------------------------------
+HAS_SINGBOX=0
+if ! command -v sing-box >/dev/null 2>&1; then
+  say "Installing sing-box (Hysteria2)"
+  curl -fsSL https://sing-box.app/install.sh | sh >/dev/null 2>&1 || warn "sing-box install failed; Hysteria2 will be unavailable."
+fi
+if command -v sing-box >/dev/null 2>&1; then
+  mkdir -p /etc/sing-box
+  # Our own unit: run as root so it can read the origin key, and use our config
+  # path. The agent writes /etc/sing-box/config.json and bounces this service.
+  cat > /etc/systemd/system/sing-box.service <<UNIT
+[Unit]
+Description=Nova sing-box (Hysteria2 UDP)
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=simple
+ExecStart=$(command -v sing-box) run -c /etc/sing-box/config.json
+Restart=always
+RestartSec=3
+User=root
+
+[Install]
+WantedBy=multi-user.target
+UNIT
+  systemctl daemon-reload
+  systemctl enable sing-box >/dev/null 2>&1 || true
+  HAS_SINGBOX=1
+  ok "sing-box $(sing-box version 2>/dev/null | head -1 | awk '{print $3}')"
+fi
+
 # ---- agent code --------------------------------------------------------------
 say "Fetching the Nova node agent"
 mkdir -p "$AGENT_DIR" "$DB_DIR" "$CERT_DIR"
@@ -159,10 +191,11 @@ if [ "${NOVA_ADMIN_PASS:-}" != "" ]; then
     -d "{\"password\":\"$NOVA_ADMIN_PASS\"}" >/dev/null 2>&1 || true
 fi
 
-# Host, self-signed flag, and all three protocols on by default (the app then
-# auto-picks the fastest).
+# Host, self-signed flag, and every protocol on by default (the app then
+# auto-picks the fastest); Hysteria2 only when sing-box installed.
+HY2=false; [ "${HAS_SINGBOX:-0}" = 1 ] && HY2=true
 curl -fsS -b "$CJ" -X POST "$B/admin/network-settings.json" -H "$UA" -H 'Content-Type: application/json' \
-  -d "{\"host\":\"$HOST\",\"insecure\":$INSECURE,\"protocols\":{\"vless\":true,\"vmess\":true,\"trojan\":true}}" >/dev/null 2>&1 || true
+  -d "{\"host\":\"$HOST\",\"insecure\":$INSECURE,\"protocols\":{\"vless\":true,\"vmess\":true,\"trojan\":true,\"hysteria2\":$HY2}}" >/dev/null 2>&1 || true
 
 # Seed one user so the node is usable immediately, but only on a fresh node
 # (re-running the installer must not churn an existing user's UUID).
