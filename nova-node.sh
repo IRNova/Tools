@@ -132,6 +132,21 @@ else
   warn "Could not install sing-box; the node will run without Hysteria2."
 fi
 
+# ---- AmneziaWG (obfuscated WireGuard server) ---------------------------------
+# Optional: lets the node host an AmneziaWG exit (junk packets + magic headers)
+# that survives DPI where plain WireGuard/WARP is blocked. Best-effort: a failed
+# install just leaves the "AmneziaWG server" panel card showing "not installed".
+if ! command -v awg >/dev/null 2>&1; then
+  say "Installing AmneziaWG (obfuscated WireGuard)"
+  if add-apt-repository -y ppa:amnezia/ppa >/dev/null 2>&1 && apt-get update >/dev/null 2>&1 \
+     && apt-get install -y linux-headers-"$(uname -r)" amneziawg amneziawg-tools >/dev/null 2>&1; then
+    modprobe amneziawg 2>/dev/null || true
+    ok "AmneziaWG installed"
+  else
+    warn "Could not install AmneziaWG; the node will run without the AmneziaWG server."
+  fi
+fi
+
 # ---- agent code --------------------------------------------------------------
 say "Fetching the Nova node agent"
 mkdir -p "$AGENT_DIR" "$DB_DIR" "$CERT_DIR"
