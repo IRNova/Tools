@@ -1,0 +1,79 @@
+# Rebuilds the free server list Nova ships with.
+#
+# These servers are volunteer-run and short-lived, so a list edited by hand goes
+# stale within days: the previous one had 13 distinct servers and 11 of them
+# refused TCP outright. Rebuilding on a schedule is the only way the list stays
+# worth shipping.
+#
+# Nothing is published on trust. Candidates are collected from public
+# aggregators, filtered to TLS, then dialled through sing-box, and only the ones
+# that return a real HTTP response are written. The job refuses to publish a
+# suspiciously small result rather than overwriting a good list with a bad run.
+name: free list
+
+on:
+  schedule:
+    # Every four hours. Frequent enough that a dead list is never up for long,
+    # infrequent enough not to hammer the upstream aggregators.
+    - cron: '17 */4 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: free-list
+  cancel-in-progress: false
+
+jobs:
+  rebuild:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Fetch sing-box
+        run: |
+          set -euo pipefail
+          ver=$(curl -sSL https://api.github.com/repos/SagerNet/sing-box/releases/latest \
+                | python3 -c 'import json,sys; print(json.load(sys.stdin)["tag_name"].lstrip("v"))')
+          echo "sing-box $ver"
+          curl -sSL -o sb.tar.gz \
+            "https://github.com/SagerNet/sing-box/releases/download/v${ver}/sing-box-${ver}-linux-amd64.tar.gz"
+          tar xzf sb.tar.gz --strip-components=1 "sing-box-${ver}-linux-amd64/sing-box"
+          chmod +x sing-box
+          ./sing-box version
+
+      - name: Collect and probe candidates
+        env:
+          NOVA_PROBE_ONLY: '1'
+        run: python3 tools/collect.py
+
+      - name: Verify each candidate carries traffic
+        env:
+          NOVA_CORE: ./sing-box
+        run: python3 tools/singbox_verify.py candidates.txt verified.txt
+
+      - name: Build the published list
+        run: python3 tools/publish.py verified.txt sub.txt
+
+      - name: Commit if the list changed
+        run: |
+          set -euo pipefail
+          git config user.name  "nova-freelist"
+          git config user.email "noreply@users.noreply.github.com"
+          # Only sub.txt and its status file are published; the intermediates are
+          # build artifacts and stay out of the repo.
+          rm -f candidates.txt verified.txt
+          if git diff --quiet -- sub.txt sub-status.json; then
+            echo "list unchanged"
+            exit 0
+          fi
+          n=$(grep -c . sub.txt)
+          git add sub.txt sub-status.json
+          git commit -m "Free list: $n verified servers"
+          git push
