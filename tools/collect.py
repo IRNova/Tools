@@ -39,9 +39,48 @@ SOURCES = [
 ]
 
 CF_TLS_PORTS = {443, 2053, 2083, 2087, 2096, 8443}
+
+# RIR delegation data for Iran, refreshed each run. A server hosted inside the
+# country a user is trying to reach past is worse than no server: it carries
+# their traffic through the jurisdiction they are avoiding, it can be pulled or
+# watched by the same people running the filter, and it circumvents nothing. The
+# public lists carry them, so they have to be taken out here.
+IR_CIDR_URL = ("https://raw.githubusercontent.com/ipverse/rir-ip/master/"
+               "country/ir/ipv4-aggregated.txt")
 MAX_OUT = int(os.environ.get("NOVA_MAX_OUT", "400"))
 PROBE_TIMEOUT = float(os.environ.get("NOVA_PROBE_TIMEOUT", "4"))
 CONCURRENCY = int(os.environ.get("NOVA_CONCURRENCY", "200"))
+
+
+_ir_nets = []
+
+
+def load_iran_ranges():
+    """Iranian IPv4 ranges. A run without them does not publish.
+
+    Failing open here would quietly ship domestic servers the moment the source
+    moved or the fetch timed out, and nothing downstream would notice, so an
+    empty list is treated as a broken run rather than as "no Iranian ranges
+    exist"."""
+    body = fetch(IR_CIDR_URL, timeout=30)
+    nets = []
+    for line in body.splitlines():
+        line = line.strip()
+        if not line or line.startswith("#"):
+            continue
+        try:
+            nets.append(ipaddress.ip_network(line))
+        except ValueError:
+            continue
+    return nets
+
+
+def is_iranian(ip):
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(a in n for n in _ir_nets)
 
 
 def log(*a):
@@ -147,6 +186,15 @@ async def probe(n, sem):
             fut = asyncio.open_connection(n["host"], n["port"])
             reader, writer = await asyncio.wait_for(fut, timeout=PROBE_TIMEOUT)
             n["tcp_ms"] = int((time.monotonic() - t) * 1000)
+            # The address actually dialled, which is what the country check
+            # needs: the link may name a domain, and only the address it
+            # resolves to says where the server is.
+            try:
+                peer = writer.get_extra_info("peername")
+                if peer:
+                    n["ip"] = peer[0]
+            except Exception:
+                pass
             writer.close()
             try:
                 await writer.wait_closed()
@@ -215,12 +263,26 @@ async def main():
         log("!! no candidates parsed; refusing to write an empty list")
         return 1
 
+    global _ir_nets
+    _ir_nets = load_iran_ranges()
+    log(f"Iranian ranges loaded: {len(_ir_nets)}")
+    if len(_ir_nets) < 100:
+        log("!! Iranian range list looks wrong; refusing to publish unfiltered")
+        return 1
+
     log(f"probing {len(uniq)} servers")
     sem = asyncio.Semaphore(CONCURRENCY)
     await asyncio.gather(*(probe(n, sem) for n in uniq))
     up = [n for n in uniq if n["tcp_ms"] is not None]
     alive = [n for n in up if n["sec"] == "reality" or n.get("tls_ok")]
     log(f"reachable: {len(up)}   completed a TLS handshake: {len(alive)}")
+
+    domestic = [n for n in alive if is_iranian(n.get("ip", ""))]
+    if domestic:
+        for n in domestic:
+            log(f"  dropped (hosted in Iran): {n['host']} -> {n.get('ip')}")
+    alive = [n for n in alive if not is_iranian(n.get("ip", ""))]
+    log(f"after dropping {len(domestic)} domestic servers: {len(alive)}")
 
     # A run that finds almost nothing is far more likely to be this machine's
     # network than the whole internet's, and overwriting a good list with the
