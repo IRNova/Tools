@@ -38,6 +38,13 @@ SOURCES = [
     "https://raw.githubusercontent.com/rtwo2/FastNodes/main/sub/continents/Europe.txt",
 ]
 
+# Measured 2026-08-23: adding FastNodes' 40 numbered continent parts took the
+# candidate pool from 1264 to 5255 and produced exactly zero extra servers
+# behind Cloudflare, both runs landing on 493. The aggregators overlap
+# completely on that subset, so breadth here buys nothing and costs four times
+# the probing. If the pool needs to grow, it has to come from sources that
+# publish Cloudflare-fronted WebSocket specifically, not from more of these.
+
 CF_TLS_PORTS = {443, 2053, 2083, 2087, 2096, 8443}
 
 # RIR delegation data for Iran, refreshed each run. A server hosted inside the
