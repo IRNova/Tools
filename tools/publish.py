@@ -11,7 +11,10 @@ import ipaddress, json, sys, time
 from urllib.parse import urlparse, parse_qs, unquote, quote
 
 CF_TLS_PORTS = {443, 2053, 2083, 2087, 2096, 8443}
-MAX_OUT = 500
+# The pool the app draws from, not what the user sees. The app sweeps this and
+# stops once it has 30 servers that carry traffic, so the pool only has to be
+# comfortably larger than 30 for that search to succeed quickly.
+MAX_OUT = 200
 
 
 def is_ip(h):
@@ -48,7 +51,9 @@ def main():
     lines = []
     for i, n in enumerate(out, 1):
         base = n["link"].split("#")[0]
-        kind = "CF" if n["fronted"] else n["proto"].upper()
+        # Everything published is Cloudflare-fronted WebSocket now, so the
+        # label carries the protocol, the only thing that still varies.
+        kind = n["proto"].upper()
         lines.append("%s#%s" % (base, quote("Nova Free %03d | %s" % (i, kind))))
     open(dst, "w", encoding="utf-8").write("\n".join(lines) + "\n")
 

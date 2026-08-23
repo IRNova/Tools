@@ -47,6 +47,44 @@ CF_TLS_PORTS = {443, 2053, 2083, 2087, 2096, 8443}
 # public lists carry them, so they have to be taken out here.
 IR_CIDR_URL = ("https://raw.githubusercontent.com/ipverse/rir-ip/master/"
                "country/ir/ipv4-aggregated.txt")
+
+# Cloudflare's published ranges. The list is only worth building out of servers
+# that sit behind them, for a reason that is specific to Iran rather than
+# general good practice:
+#
+#   Cloudflare's addresses are, most of the time, reachable from Iranian
+#   networks. The filtering works on the TLS server name instead, and that is
+#   the one attack Nova can actually answer: the SNI-block bypass fragments the
+#   name across TLS records so the DPI never sees it whole.
+#
+#   A server on Akamai, or on any ordinary datacentre address, has no such
+#   answer. It may work on one ISP this afternoon and be gone tomorrow, and a
+#   Reality server on a clean address is the same bet with a shorter fuse: it
+#   connects until the DPI notices the address, which is hours, not days.
+#
+# Those servers test green and fail when someone actually needs them, which is
+# the worst possible outcome for a list handed to people with nothing else.
+CF_V4_CIDRS = [
+    "173.245.48.0/20", "103.21.244.0/22", "103.22.200.0/22", "103.31.4.0/22",
+    "141.101.64.0/18", "108.162.192.0/18", "190.93.240.0/20", "188.114.96.0/20",
+    "197.234.240.0/22", "198.41.128.0/17", "162.158.0.0/15", "104.16.0.0/13",
+    "104.24.0.0/14", "172.64.0.0/13", "131.0.72.0/22",
+]
+_cf_nets = [ipaddress.ip_network(c) for c in CF_V4_CIDRS]
+
+
+def is_cloudflare(ip):
+    try:
+        a = ipaddress.ip_address(ip)
+    except ValueError:
+        return False
+    return any(a in n for n in _cf_nets)
+
+
+# Only WebSocket. It is what Cloudflare proxies, so it is the only transport
+# that can hide behind those addresses at all; tcp, grpc and Reality either
+# cannot be fronted or bring their own handshake the DPI can find.
+ALLOWED_TRANSPORTS = {"ws"}
 MAX_OUT = int(os.environ.get("NOVA_MAX_OUT", "400"))
 PROBE_TIMEOUT = float(os.environ.get("NOVA_PROBE_TIMEOUT", "4"))
 CONCURRENCY = int(os.environ.get("NOVA_CONCURRENCY", "200"))
@@ -157,14 +195,22 @@ def parse_link(line):
         if not usable_credential(u.scheme, u.username):
             return None
         sec = g("security").lower()
-        if sec not in ("tls", "reality", "xtls"):
-            return None  # TLS only: see module docstring
+        # Reality is deliberately excluded now. It is not weak, it is just
+        # unfrontable: its handshake impersonates a real site directly from the
+        # server's own address, so it lives exactly as long as that address
+        # stays unnoticed and there is nothing Nova can do for it afterwards.
+        if sec != "tls":
+            return None
+        net = (g("type") or "tcp").lower()
+        if net not in ALLOWED_TRANSPORTS:
+            return None
         return {
             "link": line,
             "proto": u.scheme,
             "host": u.hostname,
             "port": u.port,
             "sec": sec,
+            "net": net,
             "sni": g("sni") or g("host") or "",
             "uid": u.username or "",
             "domain": not is_ip(u.hostname),
@@ -276,6 +322,12 @@ async def main():
     up = [n for n in uniq if n["tcp_ms"] is not None]
     alive = [n for n in up if n["sec"] == "reality" or n.get("tls_ok")]
     log(f"reachable: {len(up)}   completed a TLS handshake: {len(alive)}")
+
+    # Everything published has to actually resolve into Cloudflare. The link
+    # saying "cdn.example.com" proves nothing; only the address dialled does.
+    behind = [n for n in alive if is_cloudflare(n.get("ip", ""))]
+    log(f"behind Cloudflare: {len(behind)} of {len(alive)}")
+    alive = behind
 
     domestic = [n for n in alive if is_iranian(n.get("ip", ""))]
     if domestic:
