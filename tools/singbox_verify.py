@@ -23,6 +23,13 @@ import urllib.parse, urllib.request
 from urllib.parse import urlparse, parse_qs, unquote
 
 BATCH = int(os.environ.get("NOVA_BATCH", "200"))
+
+# Stop once this many servers have been proven to work. The pool is thousands of
+# candidates and roughly one in twenty-five carries traffic, so testing all of
+# them to publish a couple of hundred is most of an hour for nothing. There is
+# no cheap way to pick the promising ones first (see collect.rank), so the only
+# honest shortcut is to stop when there is enough.
+TARGET = int(os.environ.get("NOVA_TARGET", "250"))
 TEST_URL = "HTTP://www.gstatic.com/generate_204"
 TIMEOUT_MS = 12000
 
@@ -59,6 +66,30 @@ def singbox_flow(raw):
     return ""
 
 
+# The uTLS fingerprints the core knows. An unknown one is fatal to the WHOLE
+# config, not to the one outbound carrying it, so a single bad value costs the
+# other 199 servers in its batch.
+SINGBOX_FINGERPRINTS = {"chrome", "firefox", "edge", "safari", "ios", "android",
+                        "random", "randomized", "360", "qq"}
+
+
+def singbox_fingerprint(raw):
+    """A fingerprint the core will accept, or "" for none.
+
+    Values arrive with whitespace: links carry `fp=chrome%20`, which unquotes to
+    "chrome " and the core rejects as an unknown fingerprint. That one trailing
+    space voided six whole batches of 200 servers, and the error message
+    ("unknown uTLS fingerprint: chrome") reads as though the value were fine,
+    which is what made it hard to see.
+
+    Xray-only values such as `unsafe` are dropped rather than forwarded, the
+    same way Nova's own config builder handles them."""
+    f = (raw or "").strip().lower()
+    if f in SINGBOX_FINGERPRINTS:
+        return f
+    return "chrome" if f else ""
+
+
 def outbound(link, tag):
     """Share link -> sing-box outbound. Mirrors the subset Nova publishes:
     vless/trojan over tcp/ws/grpc with TLS or Reality. Returns None for anything
@@ -75,7 +106,8 @@ def outbound(link, tag):
     if net not in ("tcp", "ws", "grpc", "httpupgrade"):
         return None
 
-    sni = g("sni") or g("host") or (u.hostname if not is_ip(u.hostname) else "")
+    sni = (g("sni") or g("host") or
+           (u.hostname if not is_ip(u.hostname) else "")).strip()
     ob = {"type": u.scheme, "tag": tag, "server": u.hostname, "server_port": u.port}
     if u.scheme == "vless":
         ob["uuid"] = unquote(u.username or "")
@@ -87,12 +119,12 @@ def outbound(link, tag):
 
     tls = {"enabled": True, "server_name": sni,
            "insecure": g("allowInsecure") in ("1", "true")}
-    fp = g("fp")
+    fp = singbox_fingerprint(g("fp"))
     if fp:
         tls["utls"] = {"enabled": True, "fingerprint": fp}
     alpn = g("alpn")
     if alpn:
-        tls["alpn"] = [a for a in alpn.split(",") if a]
+        tls["alpn"] = [a.strip() for a in alpn.split(",") if a.strip()]
     if sec == "reality":
         pbk = g("pbk")
         if not pbk:
@@ -231,6 +263,9 @@ async def main():
 
     kept, all_ms, tested, skipped = [], [], 0, 0
     for start in range(0, len(links), BATCH):
+        if len(kept) >= TARGET:
+            log(f"reached {TARGET} working servers; stopping early")
+            break
         slice_ = links[start:start + BATCH]
         bno = start // BATCH
         # Retry on a fresh port when the core does not come up. Giving up after
@@ -289,12 +324,16 @@ async def main():
 
     all_ms.sort()
     log("tested %d, carry traffic: %d" % (tested, len(kept)))
-    if skipped:
-        # Never let an untested batch pass as a clean run: the servers in it are
-        # unknown, not dead, and a list built as though they were dead loses good
-        # servers every time a core fails to start.
-        log("!! %d servers could not be tested; not publishing a partial run" % skipped)
+    # An untested batch is still not a verdict, but the pool is now dozens of
+    # batches rather than a handful, so one bad batch is a few percent of the run
+    # and refusing to publish over it would block the list for a rounding error.
+    # Refuse only when enough went untested that the result is not representative.
+    if skipped and tested and skipped > (skipped + tested) * 0.2:
+        log("!! %d of %d servers could not be tested; not publishing a partial run"
+            % (skipped, skipped + tested))
         return 1
+    if skipped:
+        log("note: %d servers could not be tested (batch failures)" % skipped)
     if all_ms:
         log("median %dms, best %dms" % (all_ms[len(all_ms) // 2], all_ms[0]))
     # Never overwrite a good list with a bad run: an empty or tiny result is far

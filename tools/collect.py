@@ -36,6 +36,17 @@ SOURCES = [
     "https://raw.githubusercontent.com/9Knight9n/v2ray-aggregator/main/merged_24h.txt",
     "https://raw.githubusercontent.com/rtwo2/FastNodes/main/sub/continents/Asia.txt",
     "https://raw.githubusercontent.com/rtwo2/FastNodes/main/sub/continents/Europe.txt",
+    # Chosen by measured yield of Cloudflare-fronted WebSocket specifically,
+    # not by size or popularity. Each of these contributed servers none of the
+    # ones above it carried; sources that only repeated what was already there
+    # were left out however large they looked. Marginal contribution measured
+    # 2026-08-23, in this order: 5099, 2335, 704, 557, 222, 69.
+    "https://raw.githubusercontent.com/TheCrowCreature/v2rayExtractor/main/scripts/sub-checker/normal.txt",
+    "https://raw.githubusercontent.com/Argh73/VpnConfigCollector/main/All_Configs_Sorted.txt",
+    "https://raw.githubusercontent.com/myominn062-svg/mk-studio-vpn-service/main/all_configs.txt",
+    "https://raw.githubusercontent.com/3yed-61/configs-collector/main/classified_output/vless.txt",
+    "https://raw.githubusercontent.com/thealiiakbarii-ai/VCC/main/configs/all.txt",
+    "https://raw.githubusercontent.com/Surfboardv2ray/TGParse/main/splitted/mixed",
 ]
 
 # Measured 2026-08-23: adding FastNodes' 40 numbered continent parts took the
@@ -278,10 +289,16 @@ async def probe(n, sem):
 
 
 def rank(n):
-    """Domain on a Cloudflare TLS port first: those are what the clean-IP
-    fronting rescues once their domain is filtered. Then plain latency."""
-    front = 0 if (n["domain"] and n["port"] in CF_TLS_PORTS) else 1
-    return (front, n["tcp_ms"] if n["tcp_ms"] is not None else 10**6)
+    """Ordering for the candidate file. Deliberately not by latency.
+
+    Every candidate now sits behind Cloudflare, so a TCP round trip measures the
+    distance to the nearest Cloudflare edge and says nothing at all about the
+    server behind it. Sorting by it looks sensible and is noise: measured over
+    6173 candidates, the ones that actually carried traffic were spread from
+    position 403 to 5309, and taking the "fastest" 1500 captured 21 of them.
+    Anything that trims this list by latency is discarding working servers at
+    random, so the whole pool goes to the core test."""
+    return (n["host"], n["port"])
 
 
 def label(n, i):
